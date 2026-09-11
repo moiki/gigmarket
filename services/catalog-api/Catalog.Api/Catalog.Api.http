@@ -1,0 +1,28 @@
+@Catalog.Api_HostAddress = http://localhost:5065
+
+POST {{Catalog.Api_HostAddress}}/api/gigs
+Accept: application/json
+Content-Type: application/json
+
+{
+  "title": "Clases de guitarra",
+  "description": "Nivel inicial",
+  "price": 25,
+  "category": "Music",
+  "ownerId": "9f0b1a8c-1234-4a5b-8c9d-0e1f2a3b4c5d"
+}
+
+###
+
+POST {{Catalog.Api_HostAddress}}/api/gigs
+Accept: application/json
+Content-Type: application/json
+
+{
+  "title": "",
+  "price": -10,
+  "category": "Cooking",
+  "ownerId": "00000000-0000-0000-0000-000000000000"
+}
+
+###

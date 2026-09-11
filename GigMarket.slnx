@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/libs/">
+    <Project Path="libs/BuildingBlocks.Common/BuildingBlocks.Common.csproj" />
+  </Folder>
+  <Folder Name="/services/" />
+  <Folder Name="/services/catalog-api/">
+    <Project Path="services/catalog-api/Catalog.Api/Catalog.Api.csproj" />
+    <Project Path="services/catalog-api/Catalog.Application/Catalog.Application.csproj" />
+    <Project Path="services/catalog-api/Catalog.Domain/Catalog.Domain.csproj" />
+    <Project Path="services/catalog-api/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/catalog-api/tests/">
+    <Project Path="services/catalog-api/tests/Catalog.UnitTests/Catalog.UnitTests.csproj" />
+  </Folder>
+</Solution>

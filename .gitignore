@@ -1,0 +1,24 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+TestResults/
+*.coverlet.*
+*.coverage
+*.dotCover*
+
+## Node
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+## IDE
+.vs/
+.idea/
+*.swp
+
+## OS
+.DS_Store
