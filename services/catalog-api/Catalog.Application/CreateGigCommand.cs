@@ -1,3 +1,7 @@
+using BuildingBlocks.Common;
+using Catalog.Domain;
+using MediatR;
+
 namespace Catalog.Application;
 
 public sealed record CreateGigCommand(
@@ -5,4 +9,4 @@ public sealed record CreateGigCommand(
     string? Description,
     decimal Price,
     string Category,
-    Guid OwnerId);
+    Guid OwnerId) : IRequest<Result<Gig>>;

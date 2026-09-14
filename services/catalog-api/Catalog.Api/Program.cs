@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using Catalog.Api;
 using Catalog.Application;
+using Catalog.Domain;
 using Catalog.Infrastructure;
+using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +13,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSingleton<IGigRepository, InMemoryGigRepository>();
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<CreateGigService>();
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateGigCommandHandler).Assembly));
 
 var app = builder.Build();
 
@@ -22,14 +24,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapPost("/api/gigs", (CreateGigRequest request, CreateGigService service) =>
+app.MapPost("/api/gigs", async (CreateGigRequest request, ISender mediator, CancellationToken ct) =>
     {
-        var result = service.Create(new CreateGigCommand(
+        var result = await mediator.Send(new CreateGigCommand(
             request.Title,
             request.Description,
             request.Price,
             request.Category,
-            request.OwnerId));
+            request.OwnerId), ct);
 
         if (!result.IsSuccess)
         {
@@ -40,20 +42,57 @@ app.MapPost("/api/gigs", (CreateGigRequest request, CreateGigService service) =>
         }
 
         var gig = result.Value;
-        return Results.Created($"/api/gigs/{gig.Id}", new CreateGigResponse(
-            gig.Id,
-            gig.Title,
-            gig.Description,
-            gig.Price,
-            gig.Category,
-            gig.Status,
-            gig.OwnerId,
-            gig.CreatedAt));
+        return Results.Created($"/api/gigs/{gig.Id}", GigResponse.From(gig));
     })
     .WithName("CreateGig")
-    .Produces<CreateGigResponse>(StatusCodes.Status201Created)
+    .Produces<GigResponse>(StatusCodes.Status201Created)
     .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
+app.MapGet("/api/gigs", async (int? page, int? pageSize, string? status, ISender mediator, CancellationToken ct) =>
+    {
+        var actualPage = page ?? 1;
+        var actualPageSize = pageSize ?? 20;
+
+        if (actualPage < 1)
+            return InvalidQuery("El parámetro 'page' debe ser mayor o igual a 1.");
+        if (actualPageSize is < 1 or > 100)
+            return InvalidQuery("El parámetro 'pageSize' debe estar entre 1 y 100.");
+
+        if (!TryParseStatus(status, out var actualStatus))
+            return InvalidQuery("El parámetro 'status' no es un estado válido.");
+
+        var result = await mediator.Send(new GetGigsQuery(actualPage, actualPageSize, actualStatus), ct);
+
+        return Results.Ok(new GetGigsResponse(
+            result.Items.Select(GigResponse.From).ToList(),
+            result.Page,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages));
+    })
+    .WithName("GetGigs")
+    .Produces<GetGigsResponse>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
 app.Run();
+
+static IResult InvalidQuery(string detail) =>
+    TypedResults.Problem(detail: detail, title: "InvalidQueryParameters", statusCode: StatusCodes.Status400BadRequest);
+
+static bool TryParseStatus(string? raw, out GigStatus? status)
+{
+    status = null;
+
+    if (raw is null)
+        return true;
+
+    if (Enum.TryParse<GigStatus>(raw, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+    {
+        status = parsed;
+        return true;
+    }
+
+    return false;
+}
 
 public partial class Program;

@@ -1,11 +1,13 @@
 using BuildingBlocks.Common;
 using Catalog.Domain;
+using MediatR;
 
 namespace Catalog.Application;
 
-public sealed class CreateGigService(IGigRepository gigs, TimeProvider clock)
+public sealed class CreateGigCommandHandler(IGigRepository gigs, TimeProvider clock)
+    : IRequestHandler<CreateGigCommand, Result<Gig>>
 {
-    public Result<Gig> Create(CreateGigCommand command)
+    public Task<Result<Gig>> Handle(CreateGigCommand command, CancellationToken cancellationToken)
     {
         var result = Gig.Create(
             Guid.NewGuid(),
@@ -17,9 +19,9 @@ public sealed class CreateGigService(IGigRepository gigs, TimeProvider clock)
             clock.GetUtcNow().UtcDateTime);
 
         if (!result.IsSuccess)
-            return result;
+            return Task.FromResult(result);
 
         gigs.Add(result.Value);
-        return result;
+        return Task.FromResult(result);
     }
 }

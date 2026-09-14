@@ -28,7 +28,7 @@ public sealed class Gig
 
     public Guid OwnerId { get; }
 
-    public GigStatus Status { get; }
+    public GigStatus Status { get; private set; }
 
     public DateTime CreatedAt { get; }
 
@@ -52,5 +52,14 @@ public sealed class Gig
             return Result<Gig>.Fail(GigErrors.UnknownCategory);
 
         return Result<Gig>.Ok(new Gig(id, title, description, price, parsedCategory, ownerId, createdAt));
+    }
+
+    internal Result<Gig> Publish()
+    {
+        if (Status != GigStatus.Draft)
+            return Result<Gig>.Fail(GigErrors.NotDraftStatus);
+
+        Status = GigStatus.Active;
+        return Result<Gig>.Ok(this);
     }
 }
