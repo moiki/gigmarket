@@ -6,7 +6,9 @@ public interface IGigRepository
 {
     void Add(Gig gig);
 
+    void Update(Gig gig);
+
     Gig? GetById(Guid id);
 
-    IReadOnlyCollection<Gig> GetAll();
+    PagedResult<Gig> GetGigs(GigStatus status, int page, int pageSize);
 }

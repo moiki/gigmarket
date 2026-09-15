@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Catalog.Application;
 using Catalog.Domain;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Catalog.UnitTests;
@@ -27,7 +26,7 @@ public class GetGigsEndpointTests
     [Fact]
     public async Task Get_WithoutParameters_ReturnsActiveGigsNewestFirstWithMetadata()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         repository.Add(NewActiveGig("Guitarra", T0));
         repository.Add(NewActiveGig("Pintura", T4));
@@ -50,7 +49,7 @@ public class GetGigsEndpointTests
     [Fact]
     public async Task Get_WithoutStatus_FiltersOutDraftGigs()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         repository.Add(NewActiveGig("Guitarra", T0));
         repository.Add(NewDraftGig("Yoga", T4));
@@ -68,7 +67,7 @@ public class GetGigsEndpointTests
     [Fact]
     public async Task Get_WithStatusDraft_ReturnsOnlyDraftGigs()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         repository.Add(NewActiveGig("Guitarra", T0));
         repository.Add(NewDraftGig("Yoga", T4));
@@ -86,7 +85,7 @@ public class GetGigsEndpointTests
     [Fact]
     public async Task Get_WithPageBeyondTotal_Returns200WithEmptyItems()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         repository.Add(NewActiveGig("Guitarra", T0));
         var client = factory.CreateClient();
@@ -108,7 +107,7 @@ public class GetGigsEndpointTests
     [InlineData("/api/gigs?status=Deleted")]
     public async Task Get_WithInvalidQueryParams_Returns400(string url)
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var client = factory.CreateClient();
 
         var response = await client.GetAsync(url);
@@ -119,7 +118,7 @@ public class GetGigsEndpointTests
     [Fact]
     public async Task Get_WithEmptyCatalog_ReturnsEmptyItemsAndZeroTotals()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/api/gigs");

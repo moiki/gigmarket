@@ -4,6 +4,7 @@ using Catalog.Application;
 using Catalog.Domain;
 using Catalog.Infrastructure;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,11 +12,22 @@ builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-builder.Services.AddSingleton<IGigRepository, InMemoryGigRepository>();
+var connectionString = builder.Configuration.GetConnectionString("GigmarketCatalog")
+    ?? throw new InvalidOperationException("La cadena de conexión 'GigmarketCatalog' es obligatoria.");
+
+builder.Services.AddDbContext<GigDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddScoped<IGigRepository, EfGigRepository>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateGigCommandHandler).Assembly));
 
 var app = builder.Build();
+
+if (app.Configuration.GetValue("Database:MigrateOnStartup", defaultValue: true))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<GigDbContext>();
+    dbContext.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {

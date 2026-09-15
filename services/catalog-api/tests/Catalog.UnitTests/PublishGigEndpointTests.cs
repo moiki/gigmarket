@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Catalog.Application;
 using Catalog.Domain;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Catalog.UnitTests;
@@ -18,7 +17,7 @@ public class PublishGigEndpointTests
     [Fact]
     public async Task Post_WithDraftGig_Returns200WithActiveGig()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         var gig = NewDraftGig();
         repository.Add(gig);
@@ -35,7 +34,7 @@ public class PublishGigEndpointTests
     [Fact]
     public async Task Post_ThenGet_ShowsGigInPublicListing()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         var gig = NewDraftGig();
         repository.Add(gig);
@@ -55,7 +54,7 @@ public class PublishGigEndpointTests
     [Fact]
     public async Task Post_WithAlreadyActiveGig_Returns422()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var repository = factory.Services.GetRequiredService<IGigRepository>();
         var gig = NewDraftGig();
         gig.Publish();
@@ -70,7 +69,7 @@ public class PublishGigEndpointTests
     [Fact]
     public async Task Post_WithUnknownGig_Returns404()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var client = factory.CreateClient();
 
         var response = await client.PostAsync($"/api/gigs/{Guid.NewGuid()}/publish", null);
@@ -81,7 +80,7 @@ public class PublishGigEndpointTests
     [Fact]
     public async Task Post_WithInvalidId_Returns400()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestApiFactory();
         var client = factory.CreateClient();
 
         var response = await client.PostAsync("/api/gigs/not-a-guid/publish", null);

@@ -14,6 +14,11 @@ public sealed class PublishGigCommandHandler(IGigRepository gigs)
         if (gig is null)
             return Task.FromResult(Result<Gig>.Fail(GigErrors.GigNotFound));
 
-        return Task.FromResult(gig.Publish());
+        var result = gig.Publish();
+
+        if (result.IsSuccess)
+            gigs.Update(gig);
+
+        return Task.FromResult(result);
     }
 }
