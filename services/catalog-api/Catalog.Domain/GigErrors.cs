@@ -12,4 +12,5 @@ public static class GigErrors
     public static readonly Error UnknownCategory = new("Gig.UnknownCategory", "La categoría no existe.");
     public static readonly Error OwnerRequired = new("Gig.OwnerRequired", "El ownerId es obligatorio.");
     public static readonly Error NotDraftStatus = new("Gig.NotDraftStatus", "Solo un gig en estado Draft puede publicarse.");
+    public static readonly Error GigNotFound = new("Gig.NotFound", "El gig no existe.");
 }

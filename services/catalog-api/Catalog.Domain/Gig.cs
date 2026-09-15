@@ -54,7 +54,7 @@ public sealed class Gig
         return Result<Gig>.Ok(new Gig(id, title, description, price, parsedCategory, ownerId, createdAt));
     }
 
-    internal Result<Gig> Publish()
+    public Result<Gig> Publish()
     {
         if (Status != GigStatus.Draft)
             return Result<Gig>.Fail(GigErrors.NotDraftStatus);

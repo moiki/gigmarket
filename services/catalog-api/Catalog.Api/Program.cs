@@ -74,6 +74,29 @@ app.MapGet("/api/gigs", async (int? page, int? pageSize, string? status, ISender
     .Produces<GetGigsResponse>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status400BadRequest);
 
+app.MapPost("/api/gigs/{id}/publish", async (Guid id, ISender mediator, CancellationToken ct) =>
+    {
+        var result = await mediator.Send(new PublishGigCommand(id), ct);
+
+        if (!result.IsSuccess)
+        {
+            var statusCode = result.Error.Code == GigErrors.GigNotFound.Code
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status422UnprocessableEntity;
+
+            return Results.Problem(
+                detail: result.Error.Message,
+                title: result.Error.Code,
+                statusCode: statusCode);
+        }
+
+        return Results.Ok(GigResponse.From(result.Value));
+    })
+    .WithName("PublishGig")
+    .Produces<GigResponse>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
 app.Run();
 
 static IResult InvalidQuery(string detail) =>
