@@ -15,10 +15,13 @@ public sealed class InMemoryGigRepository : IGigRepository
 
     public IReadOnlyCollection<Gig> GetAll() => _gigs.Values.ToList();
 
-    public PagedResult<Gig> GetGigs(GigStatus status, int page, int pageSize)
+    public PagedResult<Gig> GetGigs(GigStatus status, GigCategory? category, decimal? minPrice, decimal? maxPrice, int page, int pageSize)
     {
         var matching = _gigs.Values
             .Where(g => g.Status == status)
+            .Where(g => !category.HasValue || g.Category == category.Value)
+            .Where(g => !minPrice.HasValue || g.Price >= minPrice.Value)
+            .Where(g => !maxPrice.HasValue || g.Price <= maxPrice.Value)
             .OrderByDescending(g => g.CreatedAt)
             .ToList();
 

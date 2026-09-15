@@ -14,9 +14,9 @@ public class GetGigsQueryHandlerTests
     private static readonly DateTime T3 = new(2026, 9, 13, 10, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime T4 = new(2026, 9, 14, 10, 0, 0, DateTimeKind.Utc);
 
-    private static Gig NewActiveGig(string title, DateTime createdAt)
+    private static Gig NewActiveGig(string title, DateTime createdAt, decimal price = 25m, string category = "Music")
     {
-        var gig = Gig.Create(Guid.NewGuid(), title, null, 25m, "Music", OwnerId, createdAt).Value;
+        var gig = Gig.Create(Guid.NewGuid(), title, null, price, category, OwnerId, createdAt).Value;
         gig.Publish();
         return gig;
     }
@@ -33,7 +33,7 @@ public class GetGigsQueryHandlerTests
     }
 
     private static Task<PagedResult<Gig>> Query(InMemoryGigRepository repository, int page, int pageSize, GigStatus status) =>
-        new GetGigsQueryHandler(repository).Handle(new GetGigsQuery(page, pageSize, status), CancellationToken.None);
+        new GetGigsQueryHandler(repository).Handle(new GetGigsQuery(page, pageSize, status, null, null, null), CancellationToken.None);
 
     [Fact]
     public async Task Handle_WithActiveGigs_ReturnsOnlyActiveOrderedNewestFirst()
@@ -95,7 +95,7 @@ public class GetGigsQueryHandlerTests
         var draft = NewDraftGig("Yoga", T4);
         var repository = RepositoryWith(active, draft);
 
-        var result = await new GetGigsQueryHandler(repository).Handle(new GetGigsQuery(1, 20, null), CancellationToken.None);
+        var result = await new GetGigsQueryHandler(repository).Handle(new GetGigsQuery(1, 20, null, null, null, null), CancellationToken.None);
 
         var only = Assert.Single(result.Items);
         Assert.Equal(active.Id, only.Id);
@@ -118,6 +118,22 @@ public class GetGigsQueryHandlerTests
         Assert.Equal(5, page1.TotalCount);
         Assert.Equal(3, page1.TotalPages);
         Assert.Equal(new[] { "A" }, page3.Items.Select(g => g.Title).ToArray());
+    }
+
+    [Fact]
+    public async Task Handle_WithCategoryAndPriceFilters_AppliesAllFilters()
+    {
+        var repository = RepositoryWith(
+            NewActiveGig("Guitarra barata", T0, price: 20m, category: "Music"),
+            NewActiveGig("Logo caro", T1, price: 80m, category: "Design"),
+            NewActiveGig("Guitarra cara", T2, price: 80m, category: "Music"));
+
+        var result = await new GetGigsQueryHandler(repository)
+            .Handle(new GetGigsQuery(1, 20, GigStatus.Active, GigCategory.Music, 30m, 100m), CancellationToken.None);
+
+        var only = Assert.Single(result.Items);
+        Assert.Equal("Guitarra cara", only.Title);
+        Assert.Equal(1, result.TotalCount);
     }
 
     [Fact]

@@ -10,5 +10,5 @@ public interface IGigRepository
 
     Gig? GetById(Guid id);
 
-    PagedResult<Gig> GetGigs(GigStatus status, int page, int pageSize);
+    PagedResult<Gig> GetGigs(GigStatus status, GigCategory? category, decimal? minPrice, decimal? maxPrice, int page, int pageSize);
 }

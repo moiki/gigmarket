@@ -9,6 +9,6 @@ public sealed class GetGigsQueryHandler(IGigRepository gigs)
     public Task<PagedResult<Gig>> Handle(GetGigsQuery query, CancellationToken cancellationToken)
     {
         var status = query.Status ?? GigStatus.Active;
-        return Task.FromResult(gigs.GetGigs(status, query.Page, query.PageSize));
+        return Task.FromResult(gigs.GetGigs(status, query.Category, query.MinPrice, query.MaxPrice, query.Page, query.PageSize));
     }
 }

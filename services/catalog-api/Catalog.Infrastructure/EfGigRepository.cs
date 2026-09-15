@@ -20,11 +20,21 @@ public sealed class EfGigRepository(GigDbContext dbContext) : IGigRepository
 
     public Gig? GetById(Guid id) => dbContext.Gigs.Find(id);
 
-    public PagedResult<Gig> GetGigs(GigStatus status, int page, int pageSize)
+    public PagedResult<Gig> GetGigs(GigStatus status, GigCategory? category, decimal? minPrice, decimal? maxPrice, int page, int pageSize)
     {
         var query = dbContext.Gigs
-            .Where(g => g.Status == status)
-            .OrderByDescending(g => g.CreatedAt);
+            .Where(g => g.Status == status);
+
+        if (category.HasValue)
+            query = query.Where(g => g.Category == category.Value);
+
+        if (minPrice.HasValue)
+            query = query.Where(g => g.Price >= minPrice.Value);
+
+        if (maxPrice.HasValue)
+            query = query.Where(g => g.Price <= maxPrice.Value);
+
+        query = query.OrderByDescending(g => g.CreatedAt);
 
         var totalCount = query.Count();
         var items = query

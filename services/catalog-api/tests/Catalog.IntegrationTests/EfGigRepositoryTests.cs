@@ -66,7 +66,7 @@ public class EfGigRepositoryTests : IAsyncLifetime
 
         using var ctx3 = NewContext();
         var repo = new EfGigRepository(ctx3);
-        var result = repo.GetGigs(GigStatus.Active, 1, 20);
+        var result = repo.GetGigs(GigStatus.Active, null, null, null, 1, 20);
 
         Assert.Single(result.Items);
         Assert.Equal(gig.Id, result.Items[0].Id);
@@ -92,15 +92,39 @@ public class EfGigRepositoryTests : IAsyncLifetime
 
         var repo = new EfGigRepository(ctx);
 
-        var page1 = repo.GetGigs(GigStatus.Active, 1, 2);
+        var page1 = repo.GetGigs(GigStatus.Active, null, null, null, 1, 2);
         Assert.Equal(2, page1.Items.Count);
         Assert.Equal(3, page1.TotalCount);
         Assert.Equal(2, page1.TotalPages);
         Assert.True(page1.Items[0].CreatedAt >= page1.Items[1].CreatedAt);
 
-        var page2 = repo.GetGigs(GigStatus.Active, 2, 2);
+        var page2 = repo.GetGigs(GigStatus.Active, null, null, null, 2, 2);
         Assert.Single(page2.Items);
         Assert.Contains(page2.Items[0].Id, activeIds);
+    }
+
+    [Fact]
+    public async Task GetGigs_FiltersByCategoryAndPriceAgainstDatabase()
+    {
+        using var ctx = NewContext();
+        await ctx.Database.MigrateAsync();
+        var musicCheap = Gig.Create(Guid.NewGuid(), "Guitarra barata", null, 20m, "Music", _ownerId, DateTime.UtcNow).Value;
+        musicCheap.Publish();
+        var designExpensive = Gig.Create(Guid.NewGuid(), "Logo caro", null, 80m, "Design", _ownerId, DateTime.UtcNow).Value;
+        designExpensive.Publish();
+        var musicExpensive = Gig.Create(Guid.NewGuid(), "Guitarra cara", null, 80m, "Music", _ownerId, DateTime.UtcNow).Value;
+        musicExpensive.Publish();
+        ctx.Gigs.Add(musicCheap);
+        ctx.Gigs.Add(designExpensive);
+        ctx.Gigs.Add(musicExpensive);
+        await ctx.SaveChangesAsync();
+
+        var repo = new EfGigRepository(ctx);
+        var result = repo.GetGigs(GigStatus.Active, GigCategory.Music, 30m, 100m, 1, 20);
+
+        var only = Assert.Single(result.Items);
+        Assert.Equal(musicExpensive.Id, only.Id);
+        Assert.Equal(1, result.TotalCount);
     }
 
     [Fact]

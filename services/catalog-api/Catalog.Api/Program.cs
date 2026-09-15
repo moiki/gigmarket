@@ -60,7 +60,7 @@ app.MapPost("/api/gigs", async (CreateGigRequest request, ISender mediator, Canc
     .Produces<GigResponse>(StatusCodes.Status201Created)
     .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
-app.MapGet("/api/gigs", async (int? page, int? pageSize, string? status, ISender mediator, CancellationToken ct) =>
+app.MapGet("/api/gigs", async (int? page, int? pageSize, string? status, string? category, decimal? minPrice, decimal? maxPrice, ISender mediator, CancellationToken ct) =>
     {
         var actualPage = page ?? 1;
         var actualPageSize = pageSize ?? 20;
@@ -72,8 +72,16 @@ app.MapGet("/api/gigs", async (int? page, int? pageSize, string? status, ISender
 
         if (!TryParseStatus(status, out var actualStatus))
             return InvalidQuery("El parámetro 'status' no es un estado válido.");
+        if (!TryParseCategory(category, out var actualCategory))
+            return InvalidQuery("El parámetro 'category' no es una categoría válida.");
+        if (minPrice is < 0)
+            return InvalidQuery("El parámetro 'minPrice' no puede ser negativo.");
+        if (maxPrice is < 0)
+            return InvalidQuery("El parámetro 'maxPrice' no puede ser negativo.");
+        if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+            return InvalidQuery("El parámetro 'minPrice' no puede ser mayor que 'maxPrice'.");
 
-        var result = await mediator.Send(new GetGigsQuery(actualPage, actualPageSize, actualStatus), ct);
+        var result = await mediator.Send(new GetGigsQuery(actualPage, actualPageSize, actualStatus, actualCategory, minPrice, maxPrice), ct);
 
         return Results.Ok(new GetGigsResponse(
             result.Items.Select(GigResponse.From).ToList(),
@@ -124,6 +132,22 @@ static bool TryParseStatus(string? raw, out GigStatus? status)
     if (Enum.TryParse<GigStatus>(raw, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
     {
         status = parsed;
+        return true;
+    }
+
+    return false;
+}
+
+static bool TryParseCategory(string? raw, out GigCategory? category)
+{
+    category = null;
+
+    if (raw is null)
+        return true;
+
+    if (Enum.TryParse<GigCategory>(raw, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+    {
+        category = parsed;
         return true;
     }
 
