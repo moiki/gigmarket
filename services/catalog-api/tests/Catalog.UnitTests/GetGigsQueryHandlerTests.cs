@@ -1,3 +1,4 @@
+using BuildingBlocks.Common;
 using Catalog.Application;
 using Catalog.Domain;
 using Catalog.Infrastructure;

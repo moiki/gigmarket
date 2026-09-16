@@ -47,7 +47,7 @@ public class PublishGigCommandHandlerTests
         var result = await Publish(handler, gig.Id);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.NotDraftStatus.Code, result.Error.Code);
+        Assert.Equal(GigErrors.NotDraftStatus.Code, result.Error?.Code);
         Assert.Equal(GigStatus.Active, repository.GetById(gig.Id)!.Status);
     }
 
@@ -59,6 +59,6 @@ public class PublishGigCommandHandlerTests
         var result = await Publish(handler, Guid.NewGuid());
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.GigNotFound.Code, result.Error.Code);
+        Assert.Equal(GigErrors.GigNotFound.Code, result.Error?.Code);
     }
 }

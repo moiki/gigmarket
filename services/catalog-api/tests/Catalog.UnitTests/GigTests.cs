@@ -39,7 +39,7 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), title, null, 25m, "Music", OwnerId, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.TitleRequired.Code, result.Error.Code);
+        Assert.Equal(GigErrors.TitleRequired.Code, result.Error?.Code);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), new string('a', 101), null, 25m, "Music", OwnerId, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.TitleTooLong.Code, result.Error.Code);
+        Assert.Equal(GigErrors.TitleTooLong.Code, result.Error?.Code);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), "Clases de guitarra", new string('a', 2001), 25m, "Music", OwnerId, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.DescriptionTooLong.Code, result.Error.Code);
+        Assert.Equal(GigErrors.DescriptionTooLong.Code, result.Error?.Code);
     }
 
     [Theory]
@@ -68,7 +68,7 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), "Clases de guitarra", null, price, "Music", OwnerId, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.InvalidPrice.Code, result.Error.Code);
+        Assert.Equal(GigErrors.InvalidPrice.Code, result.Error?.Code);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), "Clases de guitarra", null, 100001m, "Music", OwnerId, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.InvalidPrice.Code, result.Error.Code);
+        Assert.Equal(GigErrors.InvalidPrice.Code, result.Error?.Code);
     }
 
     [Theory]
@@ -88,7 +88,7 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), "Clases de guitarra", null, 25m, category, OwnerId, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.UnknownCategory.Code, result.Error.Code);
+        Assert.Equal(GigErrors.UnknownCategory.Code, result.Error?.Code);
     }
 
     [Fact]
@@ -97,6 +97,6 @@ public class GigTests
         var result = Gig.Create(Guid.NewGuid(), "Clases de guitarra", null, 25m, "Music", Guid.Empty, CreatedAt);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.OwnerRequired.Code, result.Error.Code);
+        Assert.Equal(GigErrors.OwnerRequired.Code, result.Error?.Code);
     }
 }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using BuildingBlocks.AspNetCore;
 using Catalog.Api;
 using Catalog.Application;
 using Catalog.Domain;
@@ -19,6 +20,7 @@ builder.Services.AddDbContext<GigDbContext>(options => options.UseNpgsql(connect
 builder.Services.AddScoped<IGigRepository, EfGigRepository>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateGigCommandHandler).Assembly));
+builder.Services.AddHealthChecks().AddDbContextCheck<GigDbContext>("database");
 
 var app = builder.Build();
 
@@ -36,6 +38,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.MapHealthChecks("/health");
+
 app.MapPost("/api/gigs", async (CreateGigRequest request, ISender mediator, CancellationToken ct) =>
     {
         var result = await mediator.Send(new CreateGigCommand(
@@ -45,13 +49,8 @@ app.MapPost("/api/gigs", async (CreateGigRequest request, ISender mediator, Canc
             request.Category,
             request.OwnerId), ct);
 
-        if (!result.IsSuccess)
-        {
-            return Results.Problem(
-                detail: result.Error.Message,
-                title: result.Error.Code,
-                statusCode: StatusCodes.Status422UnprocessableEntity);
-        }
+        if (result.IsFailure)
+            return result.Error.Value.ToProblem();
 
         var gig = result.Value;
         return Results.Created($"/api/gigs/{gig.Id}", GigResponse.From(gig));
@@ -94,21 +93,27 @@ app.MapGet("/api/gigs", async (int? page, int? pageSize, string? status, string?
     .Produces<GetGigsResponse>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status400BadRequest);
 
+app.MapGet("/api/gigs/{id:guid}", async (Guid id, ISender mediator, CancellationToken ct) =>
+    {
+        var gig = await mediator.Send(new GetGigByIdQuery(id), ct);
+
+        return gig is null
+            ? TypedResults.Problem(
+                detail: GigErrors.GigNotFound.Message,
+                title: GigErrors.GigNotFound.Code,
+                statusCode: StatusCodes.Status404NotFound)
+            : Results.Ok(GigResponse.From(gig));
+    })
+    .WithName("GetGig")
+    .Produces<GigResponse>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.MapPost("/api/gigs/{id}/publish", async (Guid id, ISender mediator, CancellationToken ct) =>
     {
         var result = await mediator.Send(new PublishGigCommand(id), ct);
 
-        if (!result.IsSuccess)
-        {
-            var statusCode = result.Error.Code == GigErrors.GigNotFound.Code
-                ? StatusCodes.Status404NotFound
-                : StatusCodes.Status422UnprocessableEntity;
-
-            return Results.Problem(
-                detail: result.Error.Message,
-                title: result.Error.Code,
-                statusCode: statusCode);
-        }
+        if (result.IsFailure)
+            return result.ToHttpResult();
 
         return Results.Ok(GigResponse.From(result.Value));
     })

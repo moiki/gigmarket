@@ -47,7 +47,7 @@ public class CreateGigCommandHandlerTests
         var result = await Create(handler, new CreateGigCommand(string.Empty, null, 25m, "Music", OwnerId));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.TitleRequired.Code, result.Error.Code);
+        Assert.Equal(GigErrors.TitleRequired.Code, result.Error?.Code);
         Assert.Empty(repository.GetAll());
     }
 
@@ -61,7 +61,7 @@ public class CreateGigCommandHandlerTests
         var result = await Create(handler, new CreateGigCommand("Clases de guitarra", null, price, "Music", OwnerId));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.InvalidPrice.Code, result.Error.Code);
+        Assert.Equal(GigErrors.InvalidPrice.Code, result.Error?.Code);
         Assert.Empty(repository.GetAll());
     }
 
@@ -73,7 +73,7 @@ public class CreateGigCommandHandlerTests
         var result = await Create(handler, new CreateGigCommand("Clases de guitarra", null, 25m, "Cooking", OwnerId));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.UnknownCategory.Code, result.Error.Code);
+        Assert.Equal(GigErrors.UnknownCategory.Code, result.Error?.Code);
         Assert.Empty(repository.GetAll());
     }
 
@@ -85,7 +85,7 @@ public class CreateGigCommandHandlerTests
         var result = await Create(handler, new CreateGigCommand("Clases de guitarra", null, 25m, "Music", Guid.Empty));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(GigErrors.OwnerRequired.Code, result.Error.Code);
+        Assert.Equal(GigErrors.OwnerRequired.Code, result.Error?.Code);
         Assert.Empty(repository.GetAll());
     }
 }

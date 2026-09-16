@@ -37,29 +37,29 @@ public sealed class Gig
         title = title?.Trim() ?? string.Empty;
 
         if (id == Guid.Empty)
-            return Result<Gig>.Fail(GigErrors.InvalidId);
+            return GigErrors.InvalidId;
         if (title.Length == 0)
-            return Result<Gig>.Fail(GigErrors.TitleRequired);
+            return GigErrors.TitleRequired;
         if (title.Length > 100)
-            return Result<Gig>.Fail(GigErrors.TitleTooLong);
+            return GigErrors.TitleTooLong;
         if (description?.Length > 2000)
-            return Result<Gig>.Fail(GigErrors.DescriptionTooLong);
+            return GigErrors.DescriptionTooLong;
         if (price <= 0 || price > 100000)
-            return Result<Gig>.Fail(GigErrors.InvalidPrice);
+            return GigErrors.InvalidPrice;
         if (ownerId == Guid.Empty)
-            return Result<Gig>.Fail(GigErrors.OwnerRequired);
+            return GigErrors.OwnerRequired;
         if (!Enum.TryParse<GigCategory>(category, ignoreCase: true, out var parsedCategory) || !Enum.IsDefined(parsedCategory))
-            return Result<Gig>.Fail(GigErrors.UnknownCategory);
+            return GigErrors.UnknownCategory;
 
-        return Result<Gig>.Ok(new Gig(id, title, description, price, parsedCategory, ownerId, createdAt));
+        return new Gig(id, title, description, price, parsedCategory, ownerId, createdAt);
     }
 
     public Result<Gig> Publish()
     {
         if (Status != GigStatus.Draft)
-            return Result<Gig>.Fail(GigErrors.NotDraftStatus);
+            return GigErrors.NotDraftStatus;
 
         Status = GigStatus.Active;
-        return Result<Gig>.Ok(this);
+        return this;
     }
 }

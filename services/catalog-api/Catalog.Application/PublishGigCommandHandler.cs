@@ -12,7 +12,7 @@ public sealed class PublishGigCommandHandler(IGigRepository gigs)
         var gig = gigs.GetById(command.GigId);
 
         if (gig is null)
-            return Task.FromResult(Result<Gig>.Fail(GigErrors.GigNotFound));
+            return Task.FromResult<Result<Gig>>(GigErrors.GigNotFound);
 
         var result = gig.Publish();
 
