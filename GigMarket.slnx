@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/libs/">
+    <Project Path="libs/BuildingBlocks.AspNetCore/BuildingBlocks.AspNetCore.csproj" />
     <Project Path="libs/BuildingBlocks.Common/BuildingBlocks.Common.csproj" />
   </Folder>
   <Folder Name="/services/" />
@@ -12,5 +13,15 @@
   <Folder Name="/services/catalog-api/tests/">
     <Project Path="services/catalog-api/tests/Catalog.IntegrationTests/Catalog.IntegrationTests.csproj" />
     <Project Path="services/catalog-api/tests/Catalog.UnitTests/Catalog.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/services/orders-api/">
+    <Project Path="services/orders-api/Orders.Api/Orders.Api.csproj" />
+    <Project Path="services/orders-api/Orders.Application/Orders.Application.csproj" />
+    <Project Path="services/orders-api/Orders.Domain/Orders.Domain.csproj" />
+    <Project Path="services/orders-api/Orders.Infrastructure/Orders.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/orders-api/tests/">
+    <Project Path="services/orders-api/tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj" />
+    <Project Path="services/orders-api/tests/Orders.UnitTests/Orders.UnitTests.csproj" />
   </Folder>
 </Solution>

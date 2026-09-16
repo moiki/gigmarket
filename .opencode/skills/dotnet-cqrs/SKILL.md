@@ -31,8 +31,8 @@ metadata:
 Si la operación no cambia estado y no es lectura (ej. trigger), replantea el caso: en este proyecto GET debe ser Query y el resto Command.
 
 ### 2. Ubicación y nombres
-- Commands/Queries + handlers viven en **`Catalog.Application`** (raíz, plana por ahora). Si en `Application` superan ~10 archivos, introducir subcarpetas `Commands/` y `Queries/`.
-- Nombres **verbo + sustantivo**: `CreateGigCommand`, `CreateGigCommandHandler`, `GetGigsQuery`, `GetGigsQueryHandler`.
+- Commands/Queries + handlers viven en **`Catalog.Application`** / **`Orders.Application`** (raíz, plana por ahora). Si en una Application superan ~10 archivos, introducir subcarpetas `Commands/` y `Queries/`.
+- Nombres **verbo + sustantivo**: `CreateGigCommand`, `CreateGigCommandHandler`, `GetGigsQuery`, `GetGigsQueryHandler`, `CreateOrderCommand`, `CreateOrderCommandHandler`.
 - No usar sufijo `Service` para handlers (se eliminó `CreateGigService`).
 
 ### 3. Interfaces MediatR
@@ -50,28 +50,38 @@ Si la operación no cambia estado y no es lectura (ej. trigger), replantea el ca
 - Nunca excepciones de dominio para control de flujo (excepto programación: usar excepción solo si es un bug, ej. estado ilegal).
 - Commands aplican al repo dentro del handler; un Command que falla **no** debe persistir nada.
 
+### 4b. Result pattern (`BuildingBlocks.Common`)
+- `Result` (no genérico) para commands sin valor; `Result<T>` para commands con valor (ej. `Result<Gig>`).
+- Factories: `Result.Success()` / `Result.Failure(error)`; `Result<T>.Success(value)` / `Result<T>.Failure(error)`.
+- Conversión implícita: en Domain/Application se puede `return GigErrors.X;` (Error → Result) y `return gig;` (T → Result<T>).
+- `Error` es `readonly record struct(Code, Message, ErrorType)` + factories (`Error.Validation(...)`, `Error.NotFound(...)`, `Error.Conflict(...)`, `Error.Unavailable(...)` → 503, ...). Definir errores en `Catalog.Domain/GigErrors.cs` o `Orders.Domain/OrderErrors.cs`.
+- Invariantes: éxito no lleva error; failure siempre lleva error. En `if (result.IsFailure)` usar `result.Error.Value` (null-safe).
+- `result.Match(onSuccess, onFailure)` para evaluar ambas ramas exhaustivamente.
+
 ### 5. Dónde valida cada cosa (no mezclar capas)
 | Naturaleza de la validación | Vive en | Status HTTP |
 |---|---|---|
-| Invariantes de negocio (precio, título, estado) | `Catalog.Domain` (static factory `Create` / método que devuelve `Result`, p. ej. `Publish()`) | `422` |
-| Parámetros del request HTTP (page, pageSize, enum inexistente) | `Catalog.Api` (endpoint) | `400` |
-| Shape/proyección hacia afuera | `Catalog.Api` (DTOs + `GigResponse.From(Gig)`) | — |
+| Invariantes de negocio (precio, título, estado) | `Catalog.Domain` / `Orders.Domain` (static factory `Create` / método que devuelve `Result`, p. ej. `Gig.Publish()`) | `422` |
+| Parámetros del request HTTP (page, pageSize, enum inexistente) | `Catalog.Api` / `Orders.Api` (endpoint) | `400` |
+| Shape/proyección hacia afuera | `Catalog.Api` / `Orders.Api` (DTOs + `GigResponse.From(Gig)` / `OrderResponse.From(Order)`) | — |
 
 - Prohibido: reglas de negocio en el endpoint, validación de HTTP en Domain, o `Result<T>` expuesto en el shape de respuesta.
 
 ### 6. Endpoint (Minimal API)
 - Usar `ISender` (no `IMediator`) y pasar `CancellationToken`.
-- Mapear `Result<T>` → status (`.IsSuccess` → 2xx con `GigResponse.From(...)`; `!IsSuccess` → `Results.Problem` con `Error.Code` como `title` y `Error.Message` como `detail`).
+- Mapear `Result<T>` → status con la extensión compartida `BuildingBlocks.AspNetCore.ResultExtensions`: `result.ToHttpResult()` o `result.Error.Value.ToProblem()` cuando el éxito no es `Ok` (ej. 201 Created). El `ErrorType` decide el status (Validation → 422, NotFound → 404, Conflict → 409, Unavailable → 503, ...); **no** comparar `Error.Code` como string en el endpoint.
 - Anotar `.WithName(...)` + `.Produces<T>(status)` + `.ProducesProblem(status)`.
 - Query params inválidos → `TypedResults.Problem(..., statusCode: 400)`. No crear DTOs de request para GET (se bindan como argumentos: `int? page, int? pageSize, string? status`).
+- **Integración con otros servicios** (`Orders` → `Catalog`): puerto `IGigCatalog` en `Orders.Application` (devuelve `Task<Result<GigInfo>>`) + impl `HttpGigCatalog` en `Orders.Infrastructure` (HttpClient tipado). Errores mapeados: 404 → `NotFound`, caída/red/timeout → `Unavailable` (503). El handler es la unidad transaccional: valida el gig y persiste en el mismo método.
+- **Idempotencia en escrituras** (`POST /api/orders`): header `Idempotency-Key` opcional. El endpoint consulta `IIdempotencyStore` (puerto) antes de procesar; en hit con mismo hash → `200` + `Idempotency-Replayed: true` reconstruido desde BD; hash distinto → `409`. Solo se persiste la clave **en éxito**. Atomicidad orden+clave vía puerto `ITransaction` (impl `EfTransaction`), no UnitOfWork. Clave scopeada por `(buyerId, key)`; índice único `(buyer_id, key)` cierra la carrera concurrente. TTL 24 h con limpieza oportunista.
 
 ### 7. DI
 - Registrar una sola vez: `builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateGigCommandHandler).Assembly));`.
 - No registrar handlers uno por uno.
 
 ### 8. Tests — obligatorios
-- **Handler (unit)**: en `services/catalog-api/tests/Catalog.UnitTests`, xUnit con `Assert` plano, métodos `async Task` con `await` (nunca `.Result` — xUnit1031).
-- **Endpoint (contracto HTTP)**: con `WebApplicationFactory<Program>`; seedear datos vía `factory.Services.GetRequiredService<IGigRepository>()`.
+- **Handler (unit)**: en `services/{catalog|orders}-api/tests/{Catalog|Orders}.UnitTests`, xUnit con `Assert` plano, métodos `async Task` con `await` (nunca `.Result` — xUnit1031). Para orders: repos InMemory + `FakeGigCatalog` (delegate configurable) + `FakeTimeProvider`.
+- **Endpoint (contracto HTTP)**: con `WebApplicationFactory<Program>`; seedear datos vía `factory.Services.GetRequiredService<IGigRepository>()` (orders: override `IOrderRepository` y `IGigCatalog` con fakes).
 - **Transiciones internas de dominio**: exponer método `internal` + `InternalsVisibleTo` en el `.csproj` del Domain hacia `Catalog.UnitTests` (ej. `Gig.Publish()`), en vez de reflection o setters públicos.
 - Cada criterio de aceptación de la spec debe tener al menos un test que lo cubra (no solo el happy path).
 
@@ -139,10 +149,10 @@ app.MapPost("/api/gigs", async (CreateGigRequest request, ISender mediator, Canc
     var result = await mediator.Send(new CreateGigCommand(
         request.Title, request.Description, request.Price, request.Category, request.OwnerId), ct);
 
-    return result.IsSuccess
-        ? Results.Created($"/api/gigs/{result.Value.Id}", GigResponse.From(result.Value))
-        : Results.Problem(detail: result.Error.Message, title: result.Error.Code,
-            statusCode: StatusCodes.Status422UnprocessableEntity);
+    if (result.IsFailure)
+        return result.Error.Value.ToProblem();
+
+    return Results.Created($"/api/gigs/{result.Value.Id}", GigResponse.From(result.Value));
 })
 .WithName("CreateGig")
 .Produces<GigResponse>(StatusCodes.Status201Created)
@@ -178,5 +188,5 @@ dotnet build services/catalog-api/Catalog.Api/Catalog.Api.csproj
 ## Resources
 
 - **Proyecto**: `proyecto-mvp-monorepo.md`, `roadmap-dotnet-senior.md`
-- **Specs**: `specs/0001-crear-gig.md`, `specs/0002-obtener-gigs.md`
+- **Specs**: `specs/0001-crear-gig.md`, `specs/0002-obtener-gigs.md`, `specs/0006-crear-orden.md`, `specs/0007-idempotencia-orden.md`, `specs/0008-consultar-y-transicionar-orden.md`
 - **Referencia de patrones**: skill `open-net-teacher` → `references/arquitectura-patrones.md` (Clean Architecture, CQRS, Result Pattern)
